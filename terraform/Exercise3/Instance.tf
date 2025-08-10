@@ -17,16 +17,16 @@ resource "aws_instance" "web" {
   }
 
   connection {
-    type     = "ssh"
-    user     = var.username
+    type        = "ssh"
+    user        = var.username
     private_key = file("keys")
-    host     = self.public_ip
-  }  
+    host        = self.public_ip
+  }
 
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/web.sh",
-      "sudo ./tmp/web.sh"
+      "sudo /tmp/web.sh"
     ]
   }
 
@@ -35,5 +35,5 @@ resource "aws_instance" "web" {
 
 resource "aws_ec2_instance_state" "web_state" {
   instance_id = aws_instance.web.id
-  state       = "stopped"
+  state       = "running"
 }
