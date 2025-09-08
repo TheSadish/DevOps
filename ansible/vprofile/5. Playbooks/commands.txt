@@ -1,10 +1,6 @@
 Ansible Commands Used
 
-Use YUM package installer to install htppd
-ansible web01 -m ansible.builtin.yum -a "name=httpd state=present" -i inventory --become
+ansible-playbook -i inventory web-d.yaml
 
-Enable this service
-ansible web01 -m ansible.builtin.service -a "name=httpd state=started enabled=yes" -i inventory --become
+# hosts are already mentioned in the playbook
 
-Copy a file
-ansible web01 -m ansible.builtin.copy -a "src=index.html dest=/var/www/html/index.html" -i inventory --become
