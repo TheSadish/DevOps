@@ -13,3 +13,31 @@ group_vars/all -> Most common
 To run via CLI use option -e (only for testing rarely for anything else)
 Eg:
 ansible-playbook -e User_name=from_CLI -e Comment=comfromCLI variable_precedence.yml
+
+We can also define variable in a list
+
+- regions:
+    - apwest
+    - useast
+    - northeast
+
+To call it
+
+regio: "{{ regions[0] }}"
+
+Dictionary kind
+
+region:
+    us: west
+    ap: east
+
+call it
+
+region: region.us
+
+
+One more way we can define variable is an external file and call it inside playbook
+This will also be considered as in-playbook variable and will have same precedence
+
+vars_files:
+    - /var/files/external_vars.yml
