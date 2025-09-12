@@ -10,3 +10,9 @@
       ansible.builtin.user: 
         name: "{{User_Name}}"
         comment: "{{Comment}}"
+      register: usrout
+
+
+    - name: Print user and comment
+      debug:
+        var: usrout
