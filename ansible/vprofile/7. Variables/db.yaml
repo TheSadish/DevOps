@@ -34,6 +34,7 @@
       community.mysql.mysql_db:
         name: "{{dbname}}"
         state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
 
     - name: Create database user
       community.mysql.mysql_user:
@@ -41,3 +42,12 @@
         password: "{{dbpass}}"
         priv: '*.*:ALL'
         state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
+      register: dbout
+
+    - name: Print dbout variable
+      debug:
+        var: dbout
+
+    - debug:
+        msg: "DB User created with name {{dbout.user}}"
