@@ -1,1 +1,15 @@
 Playbook variables have higher priority compared to group_vars/all
+
+Priority:
+
+from CLI - override the variable's value
+Playbook variable
+host_vars
+group_vars/webservers
+group_vars/all -> Most common
+
+
+
+To run via CLI use option -e (only for testing rarely for anything else)
+Eg:
+ansible-playbook -e User_name=from_CLI -e Comment=comfromCLI variable_precedence.yml

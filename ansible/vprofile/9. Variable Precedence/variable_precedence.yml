@@ -2,13 +2,13 @@
 - name: Understanding vars
   hosts: all
   become: yes
-  vars:
-    User_Name: Sadish
-    Comment: Richa
+    #  vars:
+    #User_name: Sadish
+    #Comment: Richa
   tasks:
     - name: Create User
       ansible.builtin.user: 
-        name: "{{User_Name}}"
+        name: "{{User_name}}"
         comment: "{{Comment}}"
       register: usrout
 
