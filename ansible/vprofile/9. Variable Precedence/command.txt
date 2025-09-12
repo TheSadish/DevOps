@@ -1,0 +1,3 @@
+Here we removed the variables from playbook and added all the variables to group_vars/all.
+
+Since ansible didnt find any variable in the playbook, it checked this location, which is the structure.
