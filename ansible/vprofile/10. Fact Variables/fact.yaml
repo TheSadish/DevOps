@@ -5,3 +5,7 @@
     - name: Print Version
       debug:
         var: ansible_distribution
+
+    - name: Printing IP
+      debug:
+        var: ansible_facts.ansible_all_ipv4_addresses
