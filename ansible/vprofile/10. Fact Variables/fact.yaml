@@ -1,0 +1,7 @@
+- name: Webserver setup
+  hosts: web01
+  become: yes
+  tasks:
+    - name: Print Version
+      debug:
+        var: ansible_distribution

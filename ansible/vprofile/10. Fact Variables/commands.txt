@@ -1,0 +1,12 @@
+Fact variables in Ansible are used to collect information about remote hosts. 
+You can access facts using the `ansible_facts` variable. 
+
+To display all facts, use the `setup` module:
+
+ansible all -m setup
+
+You can reference a specific fact in a playbook like this:
+{{ ansible_facts['default_ipv4']['address'] }}
+or using .
+
+These are Dictionaries
