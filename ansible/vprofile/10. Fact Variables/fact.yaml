@@ -8,8 +8,8 @@
 
     - name: Printing IP
       debug:
-        var: ansible_facts.ansible_all_ipv4_addresses
+        var: ansible_all_ipv4_addresses
 
     - name: Printing block available
       debug:
-        msg: 'Available block is {{ansible_mounts.block_available}} out of {{ansible_mounts.block_total}}'
+        msg: 'Available block is {{ansible_mounts[0].block_available}} out of {{ansible_mounts[0].block_total}}'
