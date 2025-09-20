@@ -13,3 +13,4 @@ variable "amiID" {
     us-east-2 = "ami-0d1b5a8c13042c939"
   }
 }
+
