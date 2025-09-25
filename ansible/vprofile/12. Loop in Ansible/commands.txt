@@ -1,0 +1,3 @@
+Loops are treated as list.
+
+name: item //  Here item is a variable that iterates through the entire loop
