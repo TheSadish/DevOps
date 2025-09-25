@@ -1,0 +1,14 @@
+- name: Provisioning server
+  hosts: web01
+  become: yes
+  tasks:
+    - name: Install NTP Agent on CentOS 
+      ansible.builtin.yum:
+        name: chrony
+        state: present
+      
+    - name: Install NTP Agent on Ubuntu 
+      ansible.builtin.apt:
+        name: ntp
+        state: present    
+   
