@@ -1,0 +1,46 @@
+- name: Provisioning server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Multiple things in CentOS via loop
+      ansible.builtin.yum:
+        name: "{{item}}"
+        state: present
+      when: ansible_distribution == "CentOS"
+      loop:
+        - wget
+        - git
+        - chrony
+      
+    - name: Install Multiple Things on Ubuntu via dictionary loop
+      ansible.builtin.apt:
+        name: "{{item.command}}"
+        state: present
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+      loop:
+        - {name: 'Download Git', command: 'git'}
+        - {name: 'Download zip', command: 'zip'}
+      register: Apache2
+
+    - debug:
+        var: Apache2 
+
+    - name: Start Service on CentOS
+      ansible.builtin.service:
+        name: chronyd
+        state: started
+        enabled: yes
+      when: ansible_distribution == "CentOS"
+    
+    - name: Start Service on Ubuntu
+      ansible.builtin.service:
+        name: ntp
+        state: started
+        enabled: yes
+      when: ansible_distribution == "Ubuntu"
+      
+    - name: Banner File
+      copy:
+        content: '# This is directly getting from control node'
+        dest: /etc/motd
