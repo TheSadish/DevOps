@@ -2,7 +2,7 @@
   hosts: all
   become: yes
   tasks:
-    - name: Install NTP Agent on CentOS 
+    - name: Install Multiple things in CentOS via loop
       ansible.builtin.yum:
         name: "{{item}}"
         state: present
@@ -12,16 +12,19 @@
         - git
         - chrony
       
-    - name: Install NTP Agent on Ubuntu 
+    - name: Install Multiple Things on Ubuntu via dictionary loop
       ansible.builtin.apt:
-        name: ntp
-        state: present    
+        name: "{{item.command}}"
+        state: present
         update_cache: yes
       when: ansible_distribution == "Ubuntu"
       loop:
-        - wget
-        - git
-        - ntp   
+        - {name: 'Download Git', command: 'git'}
+        - {name: 'Download zip', command: 'zip'}
+      register: Apache2
+
+    - debug:
+        var: Apache2 
 
     - name: Start Service on CentOS
       ansible.builtin.service:
