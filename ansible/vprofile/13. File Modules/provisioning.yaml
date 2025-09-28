@@ -21,7 +21,8 @@
       loop:
         - {name: 'Download Git', command: 'git'}
         - {name: 'Download zip', command: 'zip'}
-      register: Apache2
+        - {name: 'Download ntp', command: 'ntp'}
+    # register: Apache2
 
     - debug:
         var: Apache2 
@@ -39,8 +40,34 @@
         state: started
         enabled: yes
       when: ansible_distribution == "Ubuntu"
-      
-    - name: Banner File
-      copy:
-        content: '# This is directly getting from control node'
-        dest: /etc/motd
+     
+
+    - name: reStart Service on CentOS
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+        enabled: yes
+      when: ansible_distribution == "CentOS"
+    
+    - name: reStart Service on Ubuntu
+      ansible.builtin.service:
+        name: ntp
+        state: restarted
+        enabled: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Change NTP config file for CentOS
+      template:
+        src: templates/ntpfile_centos
+        dest: /etc/chrony.conf
+        backup: yes
+      when: ansible_distribution == "CentOS"
+
+    - name: Change NTP config file for Ubuntu
+      template:
+        src: templates/ntpfile_ubuntu
+        dest: /etc/ntpsec/ntp.conf
+        backup: yes
+      when: ansible_distribution == "Ubuntu"
+
+
