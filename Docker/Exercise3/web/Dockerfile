@@ -1,4 +1,4 @@
-FROM tomcat:10-jdk21
+FROM nginx:latest
 
 LABEL "Project"="VProfile"
 LABEL "Author"="Sadish"
