@@ -1,7 +1,7 @@
 services:
    vprodb:
       build:
-         context: ./Exercise3/db
+         context: ./db
       image: sadishdash/vprofiledb
       container_name: vprodb
       ports:
@@ -28,7 +28,7 @@ services:
 
    vproapp:
       build:
-         context: ./Exercise3/app
+         context: ./app
       image: sadishdash/vprofileapp
       container_name: vproapp
       ports:
@@ -38,7 +38,7 @@ services:
 
    vproweb:
       build:
-         context: ./Exercise3/web
+         context: ./web
       image: sadishdash/vprofileweb
       container_name: vproweb
       ports:
