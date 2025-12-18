@@ -1,6 +1,8 @@
 FROM maven:3.9.9-eclipse-temurin-21-jammy AS build_image
 
 ENV MAVEN_OPTS="-Xmx1024m"
+# This above environment was givven since MAVEN was throwing an error for "HEAP size execeeding"
+# Here we are increasing the initial heap size of 1GB
 
 RUN git clone https://github.com/hkhcoder/vprofile-project.git
 RUN cd vprofile-project && git checkout containers && mvn install
