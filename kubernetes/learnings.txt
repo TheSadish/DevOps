@@ -1,8 +1,0 @@
-sudo snap install kubectl - Why snap ??
-Snap is a tool to install containerised applications on Linux.
-
-apt-get
-apt-get fetches from internet repositories and installs packages on Debian-based Linux distributions.
-
-apt-install
-installs packages on your system using apt-get.
