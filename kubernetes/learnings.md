@@ -38,3 +38,7 @@ A Deployment is a higher-level abstraction that manages a set of replicas of a p
 It provides declarative updates for pods and replica sets.
 
 kubectl create deployment <deployment-name> --image=<image-name>
+
+labels and selectors:
+Labels are key-value pairs attached to objects, such as pods, that can be used to organize and select subsets of objects.
+Selectors are used to filter and identify objects based on their labels.

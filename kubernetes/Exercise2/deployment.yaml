@@ -1,13 +1,13 @@
 # Creating a pod with a single container running a Django Todo application.
-apiVersion: v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django-todo-deployment
+  name: django-todo-deployment # Pods created by this Deployment will have names that start with django-todo-deployment. django-todo-deployment-<replicaset-hash>-<pod-suffix>
   namespace: my-django-app
   labels:
     app: django-app
 
-specs: # Deployment speicifications
+spec: # Deployment specifications
   replicas: 4
   selector:
     matchLabels: 
@@ -24,3 +24,4 @@ specs: # Deployment speicifications
         ports:
         - containerPort: 8001
         
+# kubectl apply -f deployment.yaml
