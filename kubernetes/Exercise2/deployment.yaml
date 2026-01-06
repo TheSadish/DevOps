@@ -1,0 +1,26 @@
+# Creating a pod with a single container running a Django Todo application.
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: django-todo-deployment
+  namespace: my-django-app
+  labels:
+    app: django-app
+
+specs: # Deployment speicifications
+  replicas: 4
+  selector:
+    matchLabels: 
+      app: django-app
+  
+  template:
+    metadata:
+      labels:
+        app: django-app
+    spec:
+      containers:
+      - name: django-todo-container
+        image: sadishdash/django_app_todo:latest
+        ports:
+        - containerPort: 8001
+        
