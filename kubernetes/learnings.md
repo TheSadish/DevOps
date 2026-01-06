@@ -26,3 +26,15 @@ kubectl get pods --namespace=kube-system
 
 Inside POD you need to run container not build an image.
 
+
+## Pods
+A Pod is the smallest and simplest Kubernetes object. It represents a single instance of a running process in your cluster.
+
+kubectl apply -f <pod-definition-file>.yaml
+
+## Deployments
+
+A Deployment is a higher-level abstraction that manages a set of replicas of a pod.
+It provides declarative updates for pods and replica sets.
+
+kubectl create deployment <deployment-name> --image=<image-name>
