@@ -53,3 +53,29 @@ Services enable communication between different components of an application.
 - NodePort: Exposes the service on each node's IP at a static port (the NodePort). Accessible from outside the cluster.
 - LoadBalancer: Creates an external load balancer in the cloud (if supported) and assigns a fixed, external IP to the service.
 - ExternalName: Maps the service to the contents of the externalName field (e.g., foo.bar.example.com), by returning a CNAME record with its value.
+
+## Ingress
+
+Ingress is a set of rules that control how external HTTP/HTTPS traffic enters the Kubernetes cluster.
+Ingress = traffic entry rules, not traffic itself.
+
+1. User hits: http://myapp.com
+2. Cloud LoadBalancer / NodePort receives traffic
+3. Ingress Controller receives traffic
+4. Ingress rules are checked
+5. Traffic is routed to the correct Service
+6. Service routes to Pod (via kube-proxy)
+
+Ingress is a RULE.
+Ingress Controller - is the ENGINE that applies the rule.
+
+Runs as Pods in your cluster
+Listens for incoming traffic
+
+Ingress is by default disabled in minikube. You can enable it using the following command:
+minikube addons enable ingress
+
+To get the data from ingress host you need to update your local hosts file with the ingress IP and hostname mapping.
+sudo vim /etc/hosts
+
+192.168.49.2 django-app-ingress.net

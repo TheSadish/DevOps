@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: django-app-ingress
+  namespace: my-django-app
+spec:
+  rules:
+  - host: "django-app-ingress.net"
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: django-todo-service
+            port:
+              number: 8001
