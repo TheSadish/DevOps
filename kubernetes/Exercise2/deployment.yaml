@@ -22,6 +22,6 @@ spec: # Deployment specifications
       - name: django-todo-container
         image: sadishdash/django_app_todo:latest
         ports:
-        - containerPort: 8001
+        - containerPort: 8001 # Exposing port 8001 on the container
         
 # kubectl apply -f deployment.yaml

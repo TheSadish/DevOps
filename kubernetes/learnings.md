@@ -42,3 +42,14 @@ kubectl create deployment <deployment-name> --image=<image-name>
 labels and selectors:
 Labels are key-value pairs attached to objects, such as pods, that can be used to organize and select subsets of objects.
 Selectors are used to filter and identify objects based on their labels.
+
+## Services
+
+Service is a method for exposing a network application that is running as one or more Pods in your cluster.
+Services enable communication between different components of an application.
+
+5 types of services:
+- ClusterIP (default): Exposes the service on a cluster-internal IP. Accessible only within the cluster.
+- NodePort: Exposes the service on each node's IP at a static port (the NodePort). Accessible from outside the cluster.
+- LoadBalancer: Creates an external load balancer in the cloud (if supported) and assigns a fixed, external IP to the service.
+- ExternalName: Maps the service to the contents of the externalName field (e.g., foo.bar.example.com), by returning a CNAME record with its value.

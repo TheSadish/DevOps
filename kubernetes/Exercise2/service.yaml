@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-todo-service
+  namespace: my-django-app
+spec:
+  selector: 
+    app: django-app
+  ports:
+    - protocol: TCP
+      port: 8001 # Service port to expose
+      targetPort: 8001 # Port on the container to forward traffic to
+  type: NodePort
+
+
+# labels in the Service's selector must match the labels defined in the Deployment's pod template
+# so that the Service can route traffic to the correct Pods.
