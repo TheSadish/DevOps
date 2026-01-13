@@ -79,3 +79,6 @@ To get the data from ingress host you need to update your local hosts file with 
 sudo vim /etc/hosts
 
 192.168.49.2 django-app-ingress.net
+
+For minikube use this to add ingress controller:
+minikube addons enable ingress 
