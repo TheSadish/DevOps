@@ -79,3 +79,10 @@ To get the data from ingress host you need to update your local hosts file with 
 sudo vim /etc/hosts
 
 192.168.49.2 django-app-ingress.net
+
+## Exercise 3 - ConfigMap
+
+After creating a ConfigMap and Pod, you check the environment variables inside the Pod to verify that the ConfigMap data has been correctly injected.
+
+kubectl exec -it configmap-demo-pod -- /bin/sh
+printenv
