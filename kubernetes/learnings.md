@@ -49,9 +49,9 @@ Service is a method for exposing a network application that is running as one or
 Services enable communication between different components of an application.
 
 5 types of services:
-- ClusterIP (default): Exposes the service on a cluster-internal IP. Accessible only within the cluster.
-- NodePort: Exposes the service on each node's IP at a static port (the NodePort). Accessible from outside the cluster.
-- LoadBalancer: Creates an external load balancer in the cloud (if supported) and assigns a fixed, external IP to the service.
+- ClusterIP (default): Exposes the service on a cluster-internal IP. Accessible only within the cluster (By those who have access t0 K8s network)
+- NodePort: Exposes the service on each node's IP at a static port (the NodePort). Accessible from outside the cluster, inside the organistion and only to those who have access to worker nodes.
+- LoadBalancer: Creates an external load balancer in the cloud (if supported) and assigns a fixed, external IP to the service. Exposes the app to external world (Internet)
 - ExternalName: Maps the service to the contents of the externalName field (e.g., foo.bar.example.com), by returning a CNAME record with its value.
 
 ## Ingress
@@ -80,9 +80,13 @@ sudo vim /etc/hosts
 
 192.168.49.2 django-app-ingress.net
 
+For minikube use this to add ingress controller:
+minikube addons enable ingress 
+
 ## Exercise 3 - ConfigMap
 
 After creating a ConfigMap and Pod, you check the environment variables inside the Pod to verify that the ConfigMap data has been correctly injected.
 
 kubectl exec -it configmap-demo-pod -- /bin/sh
 printenv
+
