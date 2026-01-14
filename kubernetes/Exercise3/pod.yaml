@@ -7,17 +7,27 @@ spec:
     - name: demo
       image: alpine
       command: ["sleep", "3600"]
-      env:
-        # Define the environment variable
+      env: 
         - name: PLAYER_INITIAL_LIVES # Notice that the case is different here from the key name in the ConfigMap.                                  
           valueFrom:
             configMapKeyRef:
               name: config-demo           # The ConfigMap this value comes from.
               key: player_initial_lives # The key to fetch.
             
-        - name: U O_PROPERTIES
+        - name: UI_PROPERTIES
           valueFrom:
             configMapKeyRef:
               name: config-demo 
-              key: user-interface.properties
+              key: ui_properties_file_name  # This will only work when volumeMounts is used to mount the file
 
+      volumeMounts:
+        - name: config-volume
+          mountPath: "/config"  # Mount the ConfigMap data at this path
+          readOnly: true
+  volumes: # You set volumes at the Pod level, then mount them into containers inside that Pod
+  - name: config
+    configMap:
+      name: config-demo
+      items:
+      - key: "user-interface.properties"
+        path: "user-interface.properties"
