@@ -25,7 +25,7 @@ spec:
           mountPath: "/config"  # Mount the ConfigMap data at this path
           readOnly: true
   volumes: # You set volumes at the Pod level, then mount them into containers inside that Pod
-  - name: config
+  - name: config-volume
     configMap:
       name: config-demo
       items:
