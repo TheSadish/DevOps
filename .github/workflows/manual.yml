@@ -20,7 +20,7 @@ jobs:
     - name: Send greeting
       run: echo "Hello ${{ inputs.name }}"
 
-    - name: Try getting some other directory
+    - name: Print current user
       run: |
-        sudo su
-        ls
+        whoami
+        pwd
