@@ -22,5 +22,5 @@ jobs:
 
     - name: Print current user
       run: |
-        whoami
-        pwd
+        sudo -i
+        sudo ls
