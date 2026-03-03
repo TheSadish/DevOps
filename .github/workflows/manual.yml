@@ -20,7 +20,5 @@ jobs:
     - name: Send greeting
       run: echo "Hello ${{ inputs.name }}"
 
-    - name: Print current user
-      run: |
-        sudo -i
-        sudo ls
+    - name: Check sudo
+      run: sudo ls
