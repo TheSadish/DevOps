@@ -3,7 +3,777 @@
 
 ---
 
-## **DAY 1: KUBERNETES & DOCKER + AZURE SERVICES**
+## **DAY 1: CI/CD + KUBERNETES & DOCKER + AZURE SERVICES**
+
+### **PART 0: CI/CD PIPELINES (2 hours) - CRITICAL FOR THIS ROLE**
+
+#### **What is CI/CD?**
+
+**CI (Continuous Integration):**
+- Developers commit code frequently (multiple times/day)
+- Automated tests run on every commit
+- Code quality checks (linting, security scanning)
+- Builds happen automatically
+- Quick feedback (pass/fail in minutes)
+
+**CD (Continuous Deployment/Delivery):**
+- **Continuous Delivery**: Automated deployment to staging, manual to production
+- **Continuous Deployment**: Fully automated to production
+- Artifacts versioned and trackable
+- Rollback capability if needed
+
+**Benefits:**
+- Faster time to market (deploy multiple times/day)
+- Higher quality (automated tests catch bugs)
+- Reduced manual errors
+- Better collaboration between teams
+
+---
+
+#### **1. GitHub Actions (Modern, Cloud-Native)**
+
+**What it is:**
+- GitHub's native CI/CD platform
+- Runs workflows on GitHub events (push, PR, schedule)
+- Free for public repos, minutes-based for private
+- Integrated directly with your code
+
+**Basic Workflow Structure:**
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1: Build & Test
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run security scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: Build Docker image
+      run: docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+    
+    - name: Scan Docker image
+      run: |
+        docker run aquasec/trivy image --exit-code 1 --severity HIGH,CRITICAL \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  # Job 2: Push to Registry
+  push-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Job 3: Deploy
+  deploy:
+    needs: push-image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: |
+        echo "Deploying image to Kubernetes"
+        kubectl set image deployment/myapp myapp=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --record \
+          -n production
+    
+    - name: Wait for rollout
+      run: kubectl rollout status deployment/myapp -n production --timeout=5m
+    
+    - name: Health check
+      run: |
+        for i in {1..10}; do
+          if curl -f http://myapp-service/health; then
+            echo "Application is healthy"
+            exit 0
+          fi
+          echo "Attempt $i - waiting for app to be ready..."
+          sleep 10
+        done
+        exit 1
+    
+    - name: Rollback on failure
+      if: failure()
+      run: kubectl rollout undo deployment/myapp -n production
+```
+
+**Key Concepts:**
+- **Triggers**: When workflow runs (push, PR, schedule, manual)
+- **Jobs**: Parallel or sequential tasks
+- **Steps**: Individual commands in a job
+- **Actions**: Reusable components from community
+- **Secrets**: Store sensitive data (API keys, tokens)
+
+**GitHub Actions Best Practices:**
+1. Use specific action versions (not `@latest`)
+2. Cache dependencies (`cache: 'npm'`)
+3. Run security scans before deployment
+4. Implement approval gates for production
+5. Use branch protection rules
+6. Tag releases automatically
+7. Keep logs clean (don't expose secrets)
+
+---
+
+#### **2. Azure DevOps Pipelines (Enterprise, Flexible)**
+
+**What it is:**
+- Microsoft's CI/CD platform (part of Azure ecosystem)
+- Supports multiple languages and deployment targets
+- Can be YAML-based or graphical UI
+- Better for enterprises with complex workflows
+
+**Multi-Stage Pipeline (Full Example):**
+```yaml
+trigger:
+  - main
+  - develop
+
+pr:
+  - main
+
+variables:
+  vmImage: 'ubuntu-latest'
+  imageName: 'myapp'
+  buildNumber: $(Build.BuildNumber)
+  commitHash: $(Build.SourceVersion)
+  registryConnection: 'myRegistry'
+  registryUrl: 'myregistry.azurecr.io'
+  kubernetesConnection: 'myAKSCluster'
+  kubernetesNamespace: 'default'
+
+stages:
+# ============ STAGE 1: BUILD & TEST ============
+- stage: Build
+  displayName: 'Build & Test'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Application'
+    pool:
+      vmImage: $(vmImage)
+    
+    steps:
+    - checkout: self
+      fetchDepth: 0
+      displayName: 'Checkout Code'
+    
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+      displayName: 'Install Node.js'
+    
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: '$(Build.SourcesDirectory)'
+      displayName: 'npm install'
+    
+    - task: Npm@1
+      inputs:
+        command: 'custom'
+        customCommand: 'run test'
+        workingDir: '$(Build.SourcesDirectory)'
+      displayName: 'Run Unit Tests'
+      continueOnError: false
+    
+    - task: Npm@1
+      inputs:
+        command: 'custom'
+        customCommand: 'run lint'
+        workingDir: '$(Build.SourcesDirectory)'
+      displayName: 'Run Code Linting'
+      continueOnError: true
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.SourcesDirectory)/dist'
+        artifactName: 'build-output'
+        publishLocation: 'Container'
+      displayName: 'Publish Build Artifacts'
+
+# ============ STAGE 2: SECURITY SCANNING ============
+- stage: Security
+  displayName: 'Security Scanning'
+  dependsOn: Build
+  condition: succeeded()
+  
+  jobs:
+  - job: SecurityScan
+    displayName: 'Container & Code Security'
+    pool:
+      vmImage: $(vmImage)
+    
+    steps:
+    - checkout: self
+      displayName: 'Checkout Code'
+    
+    - task: Docker@2
+      inputs:
+        command: 'build'
+        Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        tags: |
+          $(imageName):$(buildNumber)
+          $(imageName):latest
+      displayName: 'Build Docker Image'
+    
+    - task: AquaSecurityScanner@2
+      inputs:
+        image: '$(imageName):$(buildNumber)'
+        hideBaseImageVulnerabilities: false
+        threshold: 'high'
+      displayName: 'Scan Docker Image (Trivy)'
+      continueOnError: false
+    
+    - task: SnykSecurityScan@1
+      inputs:
+        serviceConnectionEndpoint: 'Snyk'
+        testDirectory: '$(Build.SourcesDirectory)'
+        failOnThreshold: 'high'
+      displayName: 'Snyk Vulnerability Scan'
+      continueOnError: true
+    
+    - script: |
+        git secrets --scan
+      displayName: 'Scan for Hardcoded Secrets'
+      continueOnError: true
+
+# ============ STAGE 3: BUILD & PUSH TO ACR ============
+- stage: BuildAndPush
+  displayName: 'Build & Push Container'
+  dependsOn: Security
+  condition: succeeded()
+  
+  jobs:
+  - job: DockerBuild
+    displayName: 'Build & Push Docker Image'
+    pool:
+      vmImage: $(vmImage)
+    
+    steps:
+    - checkout: self
+      displayName: 'Checkout Code'
+    
+    - task: Docker@2
+      displayName: 'Login to ACR'
+      inputs:
+        command: login
+        containerRegistry: $(registryConnection)
+    
+    - task: Docker@2
+      displayName: 'Build Docker Image'
+      inputs:
+        command: build
+        Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        repository: $(imageName)
+        tags: |
+          $(buildNumber)
+          latest
+          $(commitHash)
+    
+    - task: Docker@2
+      displayName: 'Push to ACR'
+      inputs:
+        command: push
+        repository: $(imageName)
+        containerRegistry: $(registryConnection)
+        tags: |
+          $(buildNumber)
+          latest
+          $(commitHash)
+    
+    - script: |
+        echo "Image pushed: $(registryUrl)/$(imageName):$(buildNumber)"
+      displayName: 'Print Image Info'
+
+# ============ STAGE 4: DEPLOY TO DEV ============
+- stage: DeployDev
+  displayName: 'Deploy to Development'
+  dependsOn: BuildAndPush
+  condition: succeeded()
+  
+  jobs:
+  - deployment: DeployDev
+    displayName: 'Deploy to Dev Cluster'
+    environment: 'development'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: 'Create/Update Deployment'
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: $(kubernetesConnection)
+              namespace: $(kubernetesNamespace)-dev
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yaml
+                $(Pipeline.Workspace)/manifests/service.yaml
+              containers: |
+                $(registryUrl)/$(imageName):$(buildNumber)
+          
+          - task: Kubernetes@1
+            displayName: 'Verify Deployment'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: $(kubernetesConnection)
+              namespace: $(kubernetesNamespace)-dev
+              command: 'rollout'
+              arguments: 'status deployment/myapp --timeout=5m'
+
+# ============ STAGE 5: SMOKE TESTS ============
+- stage: SmokeTests
+  displayName: 'Smoke Tests'
+  dependsOn: DeployDev
+  condition: succeeded()
+  
+  jobs:
+  - job: SmokeTest
+    displayName: 'Run Smoke Tests'
+    pool:
+      vmImage: $(vmImage)
+    
+    steps:
+    - checkout: self
+      displayName: 'Checkout Code'
+    
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: '$(Build.SourcesDirectory)/tests/smoke'
+      displayName: 'Install Test Dependencies'
+    
+    - script: |
+        npx jest --config=$(Build.SourcesDirectory)/tests/smoke/jest.config.js
+      displayName: 'Run Smoke Tests'
+      env:
+        TEST_ENVIRONMENT: 'dev'
+        APP_URL: 'http://myapp-dev-service'
+
+# ============ STAGE 6: DEPLOY TO STAGING ============
+- stage: DeployStaging
+  displayName: 'Deploy to Staging'
+  dependsOn: SmokeTests
+  condition: succeeded()
+  
+  jobs:
+  - deployment: DeployStaging
+    displayName: 'Deploy to Staging'
+    environment: 'staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: 'Deploy to Staging'
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: $(kubernetesConnection)
+              namespace: $(kubernetesNamespace)-staging
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yaml
+                $(Pipeline.Workspace)/manifests/service.yaml
+
+# ============ STAGE 7: APPROVAL & DEPLOY TO PRODUCTION ============
+- stage: DeployProduction
+  displayName: 'Deploy to Production'
+  dependsOn: DeployStaging
+  condition: succeeded()
+  
+  jobs:
+  - deployment: DeployProd
+    displayName: 'Deploy to Production'
+    environment: 'production'
+    strategy:
+      runOnce:
+        preDeploy:
+          steps:
+          - task: Bash@3
+            displayName: 'Pre-deployment Health Check'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Checking current production health..."
+                kubectl get deployment myapp -n production
+        
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: 'Deploy with Rolling Update'
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: $(kubernetesConnection)
+              namespace: $(kubernetesNamespace)-prod
+              strategy: 'canary'
+              percentage: '25'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yaml
+          
+          - task: Bash@3
+            displayName: 'Monitor Canary Deployment'
+            inputs:
+              targetType: 'inline'
+              script: |
+                kubectl rollout status deployment/myapp -n production --timeout=10m
+                kubectl top pods -n production
+        
+        routeTraffic:
+          steps:
+          - task: Bash@3
+            displayName: 'Route 100% Traffic'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Shifting 100% traffic to new version"
+                kubectl set env deployment/myapp -n production CANARY=false
+        
+        postRouteTraffic:
+          steps:
+          - task: Bash@3
+            displayName: 'Production Health Check'
+            inputs:
+              targetType: 'inline'
+              script: |
+                for i in {1..5}; do
+                  if curl -f https://api.example.com/health; then
+                    echo "✓ Health check passed"
+                  else
+                    echo "✗ Health check failed"
+                    exit 1
+                  fi
+                  sleep 10
+                done
+        
+        onFailure:
+          steps:
+          - task: Kubernetes@1
+            displayName: 'Automatic Rollback'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: $(kubernetesConnection)
+              namespace: production
+              command: 'rollout'
+              arguments: 'undo deployment/myapp'
+```
+
+**Key Azure DevOps Concepts:**
+- **Triggers**: What initiates the pipeline
+- **Stages**: Logical groupings (Build → Test → Deploy)
+- **Jobs**: Parallel or sequential work units
+- **Tasks**: Individual steps (built-in or from marketplace)
+- **Variables**: Store configuration values
+- **Variable Groups**: Linked to Key Vault for secrets
+- **Approvals**: Manual gates before prod deployment
+- **Environments**: Deployment targets (dev/staging/prod)
+- **Strategy**: Deployment pattern (rolling, blue-green, canary)
+
+**Azure DevOps Best Practices:**
+1. Use YAML pipelines (version controlled)
+2. Link variable groups to Key Vault
+3. Implement approval gates for production
+4. Use service connections (not personal credentials)
+5. Tag releases automatically
+6. Keep build artifacts for rollback
+7. Run security scans before deployment
+8. Monitor pipeline execution time
+9. Use predefined tasks (tested by Microsoft)
+10. Implement notifications (Teams, email)
+
+---
+
+#### **3. CI/CD Pipeline Design Patterns**
+
+**Pattern 1: Build Once, Deploy Everywhere**
+```
+Code Commit → Build (generate artifact) → Dev Deploy → Staging Deploy → Prod Deploy
+                          ↓
+                   Versioned Artifact (reused)
+```
+✅ Benefits: Single source of truth, identical builds
+❌ Risk: Bug in one might affect all
+
+**Pattern 2: Blue-Green Deployment**
+```
+Blue (Old)     Green (New)
+  ↓               ↓
+Load Balancer switches traffic instantly
+  ↓
+Instant rollback if needed
+```
+✅ Benefits: Zero downtime, instant rollback
+❌ Cost: Double infrastructure
+
+**Pattern 3: Canary Deployment**
+```
+Version 1: 95% traffic
+Version 2: 5% traffic → Monitor metrics → Increase gradually
+```
+✅ Benefits: Early detection of issues
+❌ Complexity: Traffic management logic needed
+
+**Pattern 4: Feature Flags (Release Toggle)**
+```
+Deploy to production → Feature disabled → Monitor → Enable for users
+```
+✅ Benefits: Deploy anytime, control release
+❌ Complexity: Flag management needed
+
+---
+
+#### **4. Multi-Branch Strategy (GitFlow)**
+
+```
+main (production) ← release branch ← develop ← feature branches
+    ↓
+  tags (v1.0.0)
+```
+
+**Branch Protection Rules:**
+```yaml
+# main branch
+- Require pull request reviews (minimum 2)
+- Require status checks to pass (CI/CD)
+- Require branches to be up to date
+- Require code review from code owners
+- Require approval from 2 reviewers
+- Dismiss stale reviews
+- Block automatic merges
+```
+
+---
+
+#### **5. CI/CD Common Interview Questions**
+
+**Q: "Design a CI/CD pipeline for a microservices application"**
+```
+A:
+Stages:
+1. Commit: Developer pushes code
+2. Build: Compile + unit tests
+3. Security: Scan code/containers for vulnerabilities
+4. Build Image: Create Docker image
+5. Dev Deploy: Automated to dev cluster
+6. Smoke Tests: Basic functionality tests
+7. Staging Deploy: Automated to staging
+8. Integration Tests: Full suite
+9. Approval Gate: Manual approval required
+10. Prod Deploy: Blue-green/canary strategy
+11. Health Check: Verify production is healthy
+12. Notification: Slack/email on success/failure
+
+Key practices:
+- Fail fast (stop pipeline on first failure)
+- Parallel jobs (build & scan simultaneously)
+- Artifact versioning (tag with git commit hash)
+- Secrets in Key Vault (never in code/YAML)
+- Rollback capability (keep previous version)
+- Audit trail (log all deployments)
+```
+
+**Q: "What's the difference between CI and CD?"**
+```
+A:
+CI (Continuous Integration):
+- Merge code frequently (multiple times/day)
+- Automated tests on every commit
+- Catch bugs early
+- Focuses on merging code
+
+CD (Continuous Delivery/Deployment):
+- Delivery: Automated to staging, manual to prod
+- Deployment: Fully automated to prod
+- Focuses on releasing code
+```
+
+**Q: "How do you handle secrets in CI/CD pipelines?"**
+```
+A:
+1. Never store in code/YAML
+2. Use Azure Key Vault / GitHub Secrets
+3. Retrieve at runtime using managed identity
+4. Mask in pipeline logs (logs show ***)
+5. Use RBAC to control access
+6. Audit access (check who accessed what)
+7. Rotate secrets regularly
+8. Don't commit .env files
+
+Example (Azure DevOps):
+variables:
+  - group: 'KeyVault-Secrets'  # Linked to Key Vault
+
+steps:
+- task: AzureKeyVault@2
+  inputs:
+    KeyVaultName: 'myVault'
+    SecretsFilter: '*'
+
+- script: echo "Password: $(DBPassword)"  # Shows as ***
+```
+
+**Q: "How do you ensure zero-downtime deployments?"**
+```
+A:
+1. Rolling updates:
+   - Start new pods before stopping old
+   - Health checks verify readiness
+   - Traffic shift happens gradually
+   
+2. Blue-green deployment:
+   - Run new version alongside old
+   - Switch all traffic at once
+   - Instant rollback if issues
+
+3. Canary deployment:
+   - Release to 5% users first
+   - Monitor metrics (errors, latency)
+   - Gradually increase percentage
+   
+4. Health checks critical:
+   - Readiness probe: Can accept traffic?
+   - Liveness probe: Still alive?
+   - Pod must pass readiness before traffic
+
+5. Deployment verification:
+   - Wait for rollout status
+   - Run smoke tests
+   - Monitor logs/metrics
+```
+
+**Q: "What happens when deployment fails?"**
+```
+A:
+1. Automated rollback:
+   - kubectl rollout undo deployment/myapp
+   - Revert to previous version
+   - Fast recovery (seconds)
+
+2. Monitoring & alerting:
+   - Prometheus detects error rate spike
+   - Alert sent (Slack/PagerDuty)
+   - On-call engineer notified
+
+3. Investigation:
+   - Check logs (kubectl logs)
+   - Check metrics (CPU, memory)
+   - Compare versions (what changed?)
+   - Review deployment YAML
+
+4. Remediation:
+   - Fix code issue
+   - Create hotfix branch
+   - Re-run pipeline
+   - Deploy fixed version
+
+5. Root cause analysis:
+   - Postmortem meeting
+   - Document what happened
+   - Implement safeguards
+```
+
+**Q: "How do you test in CI/CD pipeline?"**
+```
+A:
+1. Unit tests:
+   - Test individual functions
+   - Run on every commit
+   - Must pass before build
+
+2. Integration tests:
+   - Test component interactions
+   - Run in staging environment
+   - Before production deployment
+
+3. Security scanning:
+   - SAST (static): Scan code for vulnerabilities
+   - DAST (dynamic): Scan running app
+   - Dependency scanning: Check libraries
+   - Container scanning: Check image layers
+
+4. Smoke tests:
+   - Critical path tests (login, main flow)
+   - Run in dev/staging
+   - Quick check before prod
+
+5. Load tests:
+   - Simulate production traffic
+   - Check performance under load
+   - Before major releases
+
+6. Manual testing:
+   - Acceptance testing (before prod)
+   - Exploratory testing (edge cases)
+```
+
+---
 
 ### **PART 1: Docker (1 hour)**
 
@@ -856,25 +1626,66 @@ Result:   - Zero secrets in code repositories
 
 ## **QUICK REFERENCE - Interview Day Checklist**
 
-### **Day Before:**
-- [ ] Review this guide one more time
+### **Recommended Study Schedule (2 Days):**
+
+**Day 1 (5-6 hours):**
+- [ ] **CI/CD Pipelines** (1.5 hours) ← MOST IMPORTANT
+  - GitHub Actions workflow structure
+  - Azure DevOps multi-stage pipelines
+  - Deployment strategies (rolling, blue-green, canary)
+  - Branch protection & GitFlow
+  
+- [ ] **Docker** (1 hour)
+  - Dockerfile optimization
+  - Multi-stage builds
+  - Common commands
+
+- [ ] **Kubernetes** (2 hours)
+  - Architecture overview
+  - Key objects (Deployment, Service, ConfigMap, Secret)
+  - kubectl troubleshooting commands
+
+- [ ] **Azure Services** (1 hour)
+  - ACR, AKS, Key Vault basics
+  - Integration patterns
+
+**Day 2 (4-5 hours):**
+- [ ] **DevSecOps** (1.5 hours)
+  - Container scanning, secrets management
+  - RBAC, network policies
+
+- [ ] **Scripting** (1.5 hours)
+  - Bash automation scripts
+  - PowerShell for Azure
+
+- [ ] **Mock Interview** (1.5 hours)
+  - Practice STAR stories
+  - Technical Q&A
+  - Design a CI/CD pipeline
+
+### **Day Before Interview:**
+- [ ] Review CI/CD pipeline design (most asked)
 - [ ] Run through 3 STAR stories from your resume
-- [ ] Test Docker commands locally
+- [ ] Test Docker/kubectl commands locally
+- [ ] Prepare your own CI/CD pipeline questions
 - [ ] Get good sleep
 
 ### **Interview Day:**
 - [ ] Arrive 10 minutes early
-- [ ] Bring laptop (might ask for live coding)
-- [ ] Have Azure DevOps/GitHub examples ready to discuss
+- [ ] Bring laptop (might ask for live coding/pipeline design)
+- [ ] Have your GitHub/Azure DevOps pipeline examples ready
+- [ ] Be ready to design a CI/CD pipeline from scratch
 - [ ] Speak clearly - explain your thinking process
-- [ ] Ask questions about their infrastructure/challenges
+- [ ] Ask them about their CI/CD challenges and bottlenecks
 
-### **Key Talking Points:**
-✅ Your OpenTelemetry Kubernetes project  
-✅ Your 30% automation improvement metrics  
-✅ Your Azure certifications  
-✅ Your CI/CD pipeline experience  
-✅ Your DevSecOps initiatives  
+### **Key Talking Points (In Order of Importance):**
+✅ **Your CI/CD pipeline experience** (most critical for this role)
+✅ **GitHub & Azure DevOps pipelines** (they specifically ask for both)
+✅ **Your Kubernetes projects** (OpenTelemetry Demo)
+✅ **Multi-stage pipeline design** (build → test → deploy)
+✅ **Your automation improvements** (30% metric)
+✅ **DevSecOps practices** (Fincrime = security-critical)
+✅ **Your Azure certifications**
 
 ---
 
